@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>鲸鲸语音预设编辑器</title>
+<style>
+  :root {
+    --bg: #f7faf8; --panel: #ffffff; --line: #e2ece7; --ink: #1f2a26;
+    --muted: #6b7c75; --brand: #1f8a63; --brand-soft: #e6f4ee;
+    --warn: #b45309; --danger: #b91c1c; --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 22px 26px 60px; background: var(--bg); color: var(--ink);
+    font: 14px/1.6 "Microsoft YaHei", -apple-system, sans-serif;
+  }
+  h1 { font-size: 18px; font-weight: 600; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+  .bar {
+    position: sticky; top: 0; z-index: 10; background: var(--bg);
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    padding: 12px 0; margin-bottom: 14px; border-bottom: 1px solid var(--line);
+  }
+  button {
+    font: inherit; padding: 7px 14px; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+  }
+  button:hover { border-color: var(--brand); color: var(--brand); }
+  button.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+  button.primary:hover { background: #17724f; color: #fff; }
+  button.ghost { background: transparent; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  select, input[type=text], textarea {
+    font: inherit; padding: 6px 9px; border: 1px solid var(--line);
+    border-radius: 8px; background: var(--panel); color: var(--ink); width: 100%;
+  }
+  textarea { resize: vertical; line-height: 1.65; }
+  .panel {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 16px 18px; margin-bottom: 16px;
+  }
+  .panel h2 { font-size: 14px; font-weight: 600; margin: 0 0 12px; color: var(--brand); }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > * { flex: 1 1 220px; }
+  label.field { display: block; margin-bottom: 12px; }
+  label.field > span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; color: var(--muted); font-weight: 500; }
+  td.idx { width: 34px; color: var(--muted); font-size: 12px; }
+  td.ops { width: 118px; white-space: nowrap; }
+  td.ops button { padding: 4px 8px; font-size: 12px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px; background: var(--brand-soft);
+    color: #14624a; border-radius: 999px; padding: 2px 9px; font-size: 13px;
+  }
+  .chip b { cursor: pointer; font-weight: 400; opacity: .55; }
+  .chip b:hover { opacity: 1; color: var(--danger); }
+  .chip-add { display: inline-flex; gap: 4px; }
+  .chip-add input { width: 96px; padding: 2px 8px; font-size: 13px; border-radius: 999px; }
+  .tag-pill {
+    display: inline-block; background: #eef3ff; color: #274b9f;
+    border-radius: 6px; padding: 2px 8px; font-size: 13px; cursor: pointer;
+  }
+  .tag-pill:hover { background: #dfe8ff; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .status { font-size: 13px; color: var(--muted); margin-left: auto; }
+  .status.ok { color: var(--brand); }
+  .status.err { color: var(--danger); }
+  #previewOut { background: #f3f7f5; border-radius: 8px; padding: 10px 12px; font-size: 14px; min-height: 22px; }
+  .drop {
+    border: 2px dashed var(--line); border-radius: var(--radius); padding: 40px;
+    text-align: center; color: var(--muted); background: var(--panel);
+  }
+  .badge { font-size: 11px; background: var(--brand-soft); color: #14624a; border-radius: 5px; padding: 1px 6px; }
+  .warnbox {
+    background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412;
+    border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 14px;
+  }
+  .hidden { display: none !important; }
+  button.danger { color: var(--danger); border-color: #f3c9c9; }
+  button.danger:hover { background: #fdf2f2; border-color: var(--danger); }
+  .newbox {
+    background: #f7fbf9; border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 14px; margin-bottom: 14px;
+  }
+  .newbox .row > * { flex: 0 1 220px; }
+  .newbox label.field { margin-bottom: 8px; }
+  .ops-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+</style>
+</head>
+<body>
+
+<h1>鲸鲸 · 语音预设编辑器</h1>
+<div class="sub">改「遇到哪些词 → 放哪个音效」。保存后写入 <code>data/voice-presets.json</code>，规则改完下次语音合成即生效。</div>
+
+<div id="noSupport" class="warnbox hidden">
+  这个浏览器不支持直接读写本地文件。请用 <b>Edge</b> 或 <b>Chrome</b> 打开本页面。
+</div>
+
+<div class="bar">
+  <button id="btnPick" class="primary">选择 WhaleGirl 目录</button>
+  <select id="presetSelect" style="width:220px" disabled></select>
+  <button id="btnNew" disabled>＋ 新建预设</button>
+  <button id="btnSave" class="primary" disabled>保存到文件</button>
+  <button id="btnReload" class="ghost" disabled>重新读取</button>
+  <span id="status" class="status">未连接文件</span>
+</div>
+
+<div id="drop" class="drop">
+  点上面的「选择 WhaleGirl 目录」，选中鲸鲸的安装目录（里面有 <code>data</code> 文件夹的那个）。
+  <br><br>
+  例如 <code>D:\WhaleGirl</code>；也可以选这次复制出来的 <code>WhaleGirl-copy</code>。
+</div>
+
+<div id="editor" class="hidden">
+
+  <div id="newBox" class="newbox hidden">
+    <div class="row">
+      <label class="field">
+        <span>标识（英文小写，命令行用它切换）</span>
+        <input type="text" id="newKey" placeholder="例如 mychar">
+      </label>
+      <label class="field">
+        <span>显示名</span>
+        <input type="text" id="newName" placeholder="例如 我的角色">
+      </label>
+    </div>
+    <div class="ops-row" style="margin-bottom:0">
+      <button id="btnCreate" class="primary">创建</button>
+      <button id="btnCancelNew" class="ghost">取消</button>
+      <span id="newHint" class="hint" style="margin:0;align-self:center"></span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>预设信息</h2>
+    <div class="row">
+      <label class="field">
+        <span>名称（显示用）</span>
+        <input type="text" id="fName">
+      </label>
+      <label class="field">
+        <span>说明（显示用）</span>
+        <input type="text" id="fDesc">
+      </label>
+      <label class="field">
+        <span>是否当前使用</span>
+        <div style="padding-top:4px">
+          <button id="btnSetActive" class="primary">✓ 启用这一套</button>
+        </div>
+      </label>
+    </div>
+    <div class="ops-row">
+      <button id="btnDuplicate">复制这一套</button>
+      <button id="btnDeletePreset" class="danger">删除这一套</button>
+      <span class="hint" style="margin:0;align-self:center" id="presetCount"></span>
+    </div>
+    <label class="field">
+      <span>语气指令 instructions（写入 voice-send.json，需要点「同步语气」）</span>
+      <textarea id="fInstr" rows="4"></textarea>
+    </label>
+    <button id="btnApplyInstr">把这段语气同步到 voice-send.json</button>
+    <div class="hint">语气指令是给 TTS 的整体表演指导；它和标签规则相互独立。</div>
+  </div>
+
+  <div class="panel">
+    <h2>标签规则（从上往下匹配，命中第一条就停）</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th style="width:130px">音效标签</th>
+          <th>遇到这些词就触发</th>
+          <th style="width:150px">备注（给自己看）</th>
+          <th style="width:118px"></th>
+        </tr>
+      </thead>
+      <tbody id="rulesBody"></tbody>
+    </table>
+    <div style="margin-top:12px">
+      <button id="btnAddRule">+ 加一条规则</button>
+    </div>
+    <div class="hint">
+      顺序就是优先级，把常用的往上移。整句只会插一个标签。
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>试一句（改完立刻看效果）</h2>
+    <input type="text" id="previewIn" placeholder="例如：烦死了，怎么又来。" value="烦死了，怎么又来。">
+    <div style="margin-top:10px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">结果</div>
+      <div id="previewOut">—</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+"use strict";
+
+// breeze 官方中文标签（只能用这些，自造的会被念出来）
+const OFFICIAL_TAGS = [
+  "[笑]", "[轻笑]", "[咯咯笑]",
+  "[哭声]", "[抽泣]", "[呜咽]", "[呻吟]", "[哀号]",
+  "[叹气]", "[惊呼]", "[吸气]", "[呼气]", "[喘息]",
+  "[耳语]", "[喊叫]", "[惨叫]", "[唱歌]", "[哼歌]", "[结巴]", "[停顿]",
+  "[清嗓]", "[咳嗽]", "[吸鼻子]",
+  "[咂嘴]", "[啧嘴]",
+  "[打哈欠]", "[打喷嚏]", "[打嗝]", "[打饱嗝]", "[吞咽]", "[干呕]",
+  "[闷哼]", "[冷笑]", "[哼鼻子]"
+];
+
+// 从 127.0.0.1 服务打开时，读写由后端代劳；直接双击（file://）时用浏览器文件授权
+const IS_SERVER = location.protocol === "http:";
+
+const state = {
+  dirHandle: null,
+  fileHandle: null,
+  data: null,
+  current: null,
+  dirty: false,
+};
+
+const $ = (id) => document.getElementById(id);
+
+function setStatus(text, kind) {
+  const el = $("status");
+  el.textContent = text;
+  el.className = "status" + (kind ? " " + kind : "");
+}
+
+function markDirty() {
+  state.dirty = true;
+  setStatus("有未保存的修改", "err");
+}
+
+function currentPreset() {
+  return state.data && state.data.presets ? state.data.presets[state.current] : null;
+}
+
+/* ---------- 文件读写 ---------- */
+async function pickDirectory() {
+  if (IS_SERVER) { await reload(); return; }
+  if (!window.showDirectoryPicker) {
+    $("noSupport").classList.remove("hidden");
+    return;
+  }
+  try {
+    const root = await window.showDirectoryPicker({ mode: "readwrite" });
+    let dataDir;
+    try {
+      dataDir = await root.getDirectoryHandle("data", { create: false });
+    } catch (err) {
+      setStatus("选中的目录里没有 data 文件夹 —— 要选 WhaleGirl 的根目录（里面直接能看到 data、bridge、WhaleLauncher.exe）", "err");
+      return;
+    }
+    let fileHandle;
+    try {
+      fileHandle = await dataDir.getFileHandle("voice-presets.json");
+    } catch (err) {
+      setStatus("data 目录里没有 voice-presets.json —— 请先把预设文件复制到 data\\ 下", "err");
+      return;
+    }
+    state.dirHandle = root;
+    state.fileHandle = fileHandle;
+    await reload();
+  } catch (err) {
+    if (err && err.name === "AbortError") return;
+    setStatus("打开失败：" + (err && err.message ? err.message : err), "err");
+  }
+}
+
+function applyLoaded(data) {
+  if (!data || !data.presets) throw new Error("文件里没有 presets 字段");
+  state.data = data;
+  state.current = data.active && data.presets[data.active]
+    ? data.active
+    : Object.keys(data.presets)[0];
+  state.dirty = false;
+  renderAll();
+}
+
+async function reload() {
+  if (IS_SERVER) {
+    try {
+      const res = await fetch("/api/presets", { cache: "no-store" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      applyLoaded(await res.json());
+      setStatus("已读取（本机服务）", "ok");
+    } catch (err) {
+      setStatus("读取失败：" + (err && err.message ? err.message : err), "err");
+    }
+    return;
+  }
+  if (!state.fileHandle) return;
+  try {
+    const file = await state.fileHandle.getFile();
+    applyLoaded(JSON.parse(await file.text()));
+    setStatus("已读取，" + file.name, "ok");
+  } catch (err) {
+    setStatus("读取失败：" + (err && err.message ? err.message : err), "err");
+  }
+}
+
+async function save() {
+  if (!state.data) return;
+  if (IS_SERVER) {
+    try {
+      const res = await fetch("/api/presets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(state.data),
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      state.dirty = false;
+      setStatus("已保存到 voice-presets.json", "ok");
+    } catch (err) {
+      setStatus("保存失败：" + (err && err.message ? err.message : err), "err");
+    }
+    return;
+  }
+  if (!state.fileHandle) return;
+  try {
+    const writable = await state.fileHandle.createWritable();
+    await writable.write(JSON.stringify(state.data, null, 2));
+    await writable.close();
+    state.dirty = false;
+    setStatus("已保存到 voice-presets.json", "ok");
+  } catch (err) {
+    setStatus("保存失败：" + (err && err.message ? err.message : err), "err");
+  }
+}
+
+async function applyInstructions(silent) {
+  const preset = currentPreset();
+  if (!preset) return false;
+  const text = String(preset.instructions || "").trim();
+  if (!IS_SERVER) {
+    if (!silent) {
+      setStatus("双击打开的模式不能改 voice-send.json；请用「启动语音编辑器.bat」打开，或执行 voice_preset.py use " + state.current, "err");
+    }
+    return false;
+  }
+  try {
+    const res = await fetch("/api/apply-instructions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ instructions: text }),
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const out = await res.json();
+    if (!silent) setStatus("语气已同步到 voice-send.json（" + out.length + " 字符）", "ok");
+    return true;
+  } catch (err) {
+    setStatus("同步失败：" + (err && err.message ? err.message : err), "err");
+    return false;
+  }
+}
+
+/* ---------- 渲染 ---------- */
+function renderAll() {
+  $("drop").classList.add("hidden");
+  $("editor").classList.remove("hidden");
+  $("presetSelect").disabled = false;
+  $("btnNew").disabled = false;
+  $("btnSave").disabled = false;
+  $("btnReload").disabled = false;
+
+  const sel = $("presetSelect");
+  sel.innerHTML = "";
+  Object.entries(state.data.presets).forEach(([key, preset]) => {
+    const opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = (key === state.data.active ? "★ " : "") + (preset.name || key);
+    sel.appendChild(opt);
+  });
+  sel.value = state.current;
+  $("presetCount").textContent = "共 " + Object.keys(state.data.presets).length + " 套（标识：" + state.current + "）";
+  renderPreset();
+}
+
+function renderPreset() {
+  const preset = currentPreset();
+  if (!preset) return;
+  $("fName").value = preset.name || "";
+  $("fDesc").value = preset.desc || "";
+  $("fInstr").value = preset.instructions || "";
+  const isActive = state.current === state.data.active;
+  const btnActive = $("btnSetActive");
+  btnActive.textContent = isActive ? "当前使用中 ✓" : "设为当前使用";
+  btnActive.disabled = isActive;
+  const total = Object.keys(state.data.presets).length;
+  $("btnDeletePreset").disabled = total <= 1;
+  $("btnDeletePreset").textContent = total <= 1 ? "删除这一套（至少留一套）" : "删除这一套";
+  $("presetCount").textContent = "共 " + total + " 套（标识：" + state.current + "）";
+  renderRules();
+  updatePreview();
+}
+
+function renderRules() {
+  const preset = currentPreset();
+  const body = $("rulesBody");
+  body.innerHTML = "";
+  (preset.tags || []).forEach((rule, index) => {
+    const tr = document.createElement("tr");
+
+    const tdIdx = document.createElement("td");
+    tdIdx.className = "idx";
+    tdIdx.textContent = index + 1;
+
+    const tdTag = document.createElement("td");
+    const select = document.createElement("select");
+    OFFICIAL_TAGS.forEach((tag) => {
+      const opt = document.createElement("option");
+      opt.value = tag;
+      opt.textContent = tag;
+      select.appendChild(opt);
+    });
+    select.value = OFFICIAL_TAGS.includes(rule.tag) ? rule.tag : OFFICIAL_TAGS[0];
+    select.addEventListener("change", () => {
+      rule.tag = select.value;
+      delete rule.pattern;
+      markDirty();
+      updatePreview();
+    });
+    tdTag.appendChild(select);
+
+    const tdWords = document.createElement("td");
+    tdWords.appendChild(buildWordEditor(rule));
+
+    const tdWhen = document.createElement("td");
+    const whenInput = document.createElement("input");
+    whenInput.type = "text";
+    whenInput.value = rule.when || "";
+    whenInput.placeholder = "备注";
+    whenInput.addEventListener("input", () => { rule.when = whenInput.value; markDirty(); });
+    tdWhen.appendChild(whenInput);
+
+    const tdOps = document.createElement("td");
+    tdOps.className = "ops";
+    tdOps.appendChild(makeButton("↑", () => moveRule(index, -1), index === 0));
+    tdOps.appendChild(makeButton("↓", () => moveRule(index, 1), index === preset.tags.length - 1));
+    tdOps.appendChild(makeButton("删", () => {
+      if (!confirm("删掉这条规则？")) return;
+      preset.tags.splice(index, 1);
+      markDirty(); renderRules(); updatePreview();
+    }));
+
+    tr.append(tdIdx, tdTag, tdWords, tdWhen, tdOps);
+    body.appendChild(tr);
+  });
+}
+
+function makeButton(label, onClick, disabled) {
+  const btn = document.createElement("button");
+  btn.textContent = label;
+  btn.disabled = Boolean(disabled);
+  btn.addEventListener("click", onClick);
+  return btn;
+}
+
+function buildWordEditor(rule) {
+  const wrap = document.createElement("div");
+  wrap.className = "chips";
+
+  if (rule.pattern) {
+    const pill = document.createElement("span");
+    pill.className = "tag-pill";
+    pill.textContent = "正则：" + rule.pattern;
+    pill.title = "点一下改成关键词模式";
+    pill.addEventListener("click", () => {
+      if (!confirm("改成关键词模式？现在的正则会被清空。")) return;
+      delete rule.pattern;
+      rule.words = [];
+      markDirty(); renderRules(); updatePreview();
+    });
+    wrap.appendChild(pill);
+    return wrap;
+  }
+
+  (rule.words || []).forEach((word, wi) => {
+    const chip = document.createElement("span");
+    chip.className = "chip";
+    chip.appendChild(document.createTextNode(word));
+    const x = document.createElement("b");
+    x.textContent = "×";
+    x.title = "删掉这个词";
+    x.addEventListener("click", () => {
+      rule.words.splice(wi, 1);
+      markDirty(); renderRules(); updatePreview();
+    });
+    chip.appendChild(x);
+    wrap.appendChild(chip);
+  });
+
+  const adder = document.createElement("span");
+  adder.className = "chip-add";
+  const input = document.createElement("input");
+  input.type = "text";
+  input.placeholder = "加词";
+  const add = document.createElement("button");
+  add.textContent = "+";
+  add.style.padding = "2px 9px";
+  const commit = () => {
+    const word = input.value.trim();
+    if (!word) return;
+    rule.words = rule.words || [];
+    if (!rule.words.includes(word)) rule.words.push(word);
+    input.value = "";
+    markDirty(); renderRules(); updatePreview();
+  };
+  add.addEventListener("click", commit);
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") commit(); });
+  adder.append(input, add);
+  wrap.appendChild(adder);
+
+  return wrap;
+}
+
+function moveRule(index, delta) {
+  const preset = currentPreset();
+  const target = index + delta;
+  if (target < 0 || target >= preset.tags.length) return;
+  const [rule] = preset.tags.splice(index, 1);
+  preset.tags.splice(target, 0, rule);
+  markDirty(); renderRules(); updatePreview();
+}
+
+/* ---------- 预览：复刻 Python 的匹配逻辑 ---------- */
+function escapeRegExp(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function ruleRegex(rule) {
+  try {
+    if (rule.pattern) return new RegExp(rule.pattern);
+    if (Array.isArray(rule.words) && rule.words.length) {
+      return new RegExp("(?:" + rule.words.map(escapeRegExp).join("|") + ")");
+    }
+  } catch (err) {
+    return null;
+  }
+  return null;
+}
+
+function addTag(text) {
+  const preset = currentPreset();
+  const s = String(text || "");
+  if (s.length < 4 || s.includes("[") || s.includes("]")) return s;
+  for (const rule of preset.tags || []) {
+    const re = ruleRegex(rule);
+    if (!re) continue;
+    const match = re.exec(s);
+    if (!match) continue;
+    const lead = s.slice(0, match.index + match[0].length).trim();
+    if (match.index <= 1 && ["唉", "哎", "啧", "哼", "算了", "无所谓"].includes(lead)) {
+      return (s.trimEnd() + " " + rule.tag).trimEnd();
+    }
+    const rest = s.slice(match.index + match[0].length);
+    const breaks = "，,。！!？?；;…";
+    let cut = -1;
+    for (let i = 0; i < rest.length; i += 1) {
+      if (breaks.includes(rest[i])) { cut = match.index + match[0].length + i + 1; break; }
+    }
+    if (cut < 0) return (s.trimEnd() + " " + rule.tag).trimEnd();
+    return (s.slice(0, cut).trimEnd() + rule.tag + " " + s.slice(cut).trimStart()).trimEnd();
+  }
+  return s;
+}
+
+function updatePreview() {
+  const input = $("previewIn").value;
+  const out = addTag(input);
+  $("previewOut").textContent = out === input ? input + "   ← 没有命中，原样输出" : out;
+}
+
+/* ---------- 事件绑定 ---------- */
+$("btnPick").addEventListener("click", pickDirectory);
+$("btnSave").addEventListener("click", save);
+$("btnApplyInstr").addEventListener("click", applyInstructions);
+$("btnReload").addEventListener("click", () => {
+  if (state.dirty && !confirm("有未保存的修改，重新读取会丢掉，继续？")) return;
+  reload();
+});
+
+$("presetSelect").addEventListener("change", (e) => {
+  state.current = e.target.value;
+  renderPreset();
+  const preset = currentPreset();
+  const label = (preset && preset.name) || state.current;
+  if (state.current !== state.data.active) {
+    setStatus("正在查看「" + label + "」—— 还没启用。要用它就点「✓ 启用这一套」", "err");
+  } else {
+    setStatus("当前生效的就是「" + label + "」", "ok");
+  }
+});
+
+$("fName").addEventListener("input", (e) => {
+  const preset = currentPreset(); if (!preset) return;
+  preset.name = e.target.value;
+  const opt = Array.from($("presetSelect").options).find((o) => o.value === state.current);
+  if (opt) opt.textContent = e.target.value;
+  markDirty();
+});
+
+$("fDesc").addEventListener("input", (e) => {
+  const preset = currentPreset(); if (!preset) return;
+  preset.desc = e.target.value; markDirty();
+});
+
+$("fInstr").addEventListener("input", (e) => {
+  const preset = currentPreset(); if (!preset) return;
+  preset.instructions = e.target.value; markDirty();
+});
+
+$("btnAddRule").addEventListener("click", () => {
+  const preset = currentPreset(); if (!preset) return;
+  preset.tags = preset.tags || [];
+  preset.tags.push({ tag: "[轻笑]", words: [], when: "新规则" });
+  markDirty(); renderRules(); updatePreview();
+});
+
+$("previewIn").addEventListener("input", updatePreview);
+
+// 新建 / 复制 / 删除预设
+$("btnNew").addEventListener("click", () => {
+  const box = $("newBox");
+  box.classList.toggle("hidden");
+  if (!box.classList.contains("hidden")) {
+    $("newKey").value = "";
+    $("newName").value = "";
+    $("newHint").textContent = "";
+    $("newKey").focus();
+  }
+});
+
+$("btnCancelNew").addEventListener("click", () => $("newBox").classList.add("hidden"));
+
+function createPreset() {
+  if (!state.data) return;
+  const key = $("newKey").value.trim().toLowerCase();
+  const name = $("newName").value.trim();
+  if (!/^[a-z][a-z0-9_-]{1,30}$/.test(key)) {
+    $("newHint").textContent = "标识要小写字母开头，2~31 位，只能用 a-z 0-9 _ -";
+    return;
+  }
+  if (state.data.presets[key]) {
+    $("newHint").textContent = "标识「" + key + "」已存在";
+    return;
+  }
+  if (!name) {
+    $("newHint").textContent = "给它起个显示名";
+    return;
+  }
+  state.data.presets[key] = {
+    name: name,
+    desc: "",
+    instructions: "",
+    tags: [
+      { tag: "[轻笑]", words: ["开心", "好耶"], when: "开心" },
+      { tag: "[叹气]", words: ["唉", "算了"], when: "无奈" },
+      { tag: "[惊呼]", words: ["卧槽", "真的假的"], when: "惊讶" }
+    ]
+  };
+  state.current = key;
+  markDirty();
+  $("newBox").classList.add("hidden");
+  renderAll();
+  setStatus("已新建「" + name + "」，记得点保存", "ok");
+}
+
+$("btnCreate").addEventListener("click", createPreset);
+$("newKey").addEventListener("keydown", (e) => { if (e.key === "Enter") $("newName").focus(); });
+$("newName").addEventListener("keydown", (e) => { if (e.key === "Enter") createPreset(); });
+
+$("btnDuplicate").addEventListener("click", () => {
+  const cur = currentPreset();
+  if (!cur || !state.data) return;
+  let base = state.current.slice(0, 24) + "-copy";
+  let key = base;
+  let n = 2;
+  while (state.data.presets[key]) { key = base + n; n += 1; }
+  state.data.presets[key] = JSON.parse(JSON.stringify(cur));
+  state.data.presets[key].name = (cur.name || state.current) + " 副本";
+  state.current = key;
+  markDirty();
+  renderAll();
+  setStatus("已复制为「" + state.data.presets[key].name + "」，记得点保存", "ok");
+});
+
+$("btnDeletePreset").addEventListener("click", () => {
+  if (!state.data) return;
+  const keys = Object.keys(state.data.presets);
+  if (keys.length <= 1) { alert("至少要保留一套预设"); return; }
+  const cur = currentPreset();
+  const label = cur.name || state.current;
+  if (!confirm("确定删除「" + label + "」？要点保存才真正生效。")) return;
+  delete state.data.presets[state.current];
+  if (state.data.active === state.current) {
+    state.data.active = Object.keys(state.data.presets)[0];
+  }
+  state.current = state.data.active && state.data.presets[state.data.active]
+    ? state.data.active
+    : Object.keys(state.data.presets)[0];
+  markDirty();
+  renderAll();
+  setStatus("已删除「" + label + "」，记得点保存", "err");
+});
+
+// 启用这一套：设当前 + 保存 JSON + 同步语气，一步到位（避免"改了没落盘"）
+$("btnSetActive").addEventListener("click", async () => {
+  if (!state.data) return;
+  const preset = currentPreset();
+  const label = (preset && preset.name) || state.current;
+  state.data.active = state.current;
+  markDirty();
+  renderAll();
+  renderPreset();
+
+  await save();
+  if (state.dirty) return; // 保存失败，状态栏已经是错误信息
+
+  if (IS_SERVER) {
+    await applyInstructions(true);
+    if (state.dirty) return;
+    setStatus("已启用「" + label + "」：标签规则已保存，语气已同步。重启鲸鲸生效。", "ok");
+  } else {
+    setStatus("已启用「" + label + "」并保存。双击模式下语气指令无法自动同步，请用命令行：voice_preset.py use " + state.current, "err");
+  }
+});
+
+window.addEventListener("beforeunload", (e) => {
+  if (!state.dirty) return;
+  e.preventDefault();
+  e.returnValue = "";
+});
+
+if (!window.showDirectoryPicker && !IS_SERVER) $("noSupport").classList.remove("hidden");
+
+// 从本机服务打开：不用选目录，直接读
+if (IS_SERVER) {
+  const pick = $("btnPick");
+  pick.textContent = "重新读取";
+  pick.addEventListener("click", () => {
+    if (state.dirty && !confirm("有未保存的修改，重新读取会丢掉，继续？")) return;
+    reload();
+  });
+  $("btnReload").classList.add("hidden");
+  reload();
+}
+</script>
+</body>
+</html>
