@@ -29,3 +29,24 @@
 - 这些是**独立配套工具**，不属于插件包，也不随鲸鲸插件市场分发
 - 基于鲸鲸 / Whale Girl（作者 @Banan1cee，https://github.com/Banan1cee/whale_girl），
   仅使用其公开的 JavaScript API 4 扩展点，未修改任何程序文件
+
+## 不用编辑器，怎么切换语气预设
+
+改一个词就行：
+
+1. 打开 `data/voice-presets.json`（记事本即可）
+2. 把最上面的 `"active": "xxx"` 换成要用的预设 key：
+
+   | key | 预设 |
+   |---|---|
+   | `irritable` | 暴躁（一点就着、带脏字、会吼人） |
+   | `adorkable` | 呆萌（慢半拍、语气软） |
+   | `normal` | 普通（自然平稳） |
+   | `gentle` | 温柔（软和、会接话） |
+   | `cold` | 冷酷（惜字如金、叹气多） |
+
+3. 保存，下一条回复就生效，**不用重启鲸鲸**
+
+每套预设里的 `voiceChance`（0-100）是这套自己的语音概率；设为 0 就只在明确要语音时才发。
+
+> 只改 `active` 这一个词，别动别的；JSON 改坏了插件会退回内置默认，从分享包拷一份 `voice-presets.json` 覆盖回去即可。
