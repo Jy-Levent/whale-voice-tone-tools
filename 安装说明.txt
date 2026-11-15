@@ -16,8 +16,8 @@
 
 包内文件
 --------
-voice-tone-1.0.0.zip          插件本体（里面是 plugin.json + plugin.js）
-voice-presets.json            预设示例（两套：暴躁 / 呆萌。可不放——插件首次发语音会自动生成同样内容）
+voice-tone-1.0.2.zip          插件本体（里面是 plugin.json + plugin.js）
+voice-presets.json            预设示例（五套：暴躁 / 呆萌 / 普通 / 温柔 / 冷酷。可不放——插件首次发语音会自动生成同样内容）
 voice-preset-editor.html      配套工具：可视化编辑语气（双击打开）
 语音预设编辑器-使用说明.txt    配套工具怎么用
 一键启动工具\                可选：本地服务版，双击 bat 不用选文件夹（见里面《先看我.txt》）
@@ -26,7 +26,7 @@ voice-preset-editor.html      配套工具：可视化编辑语气（双击打�
 安装步骤
 --------
 1) 装插件
-   打开鲸鲸启动器 →「插件市场」→ 右上角「从本地安装」→ 选 voice-tone-1.0.0.zip
+   打开鲸鲸启动器 →「插件市场」→ 右上角「从本地安装」→ 选 voice-tone-1.0.2.zip
    装好后在「已安装」里能看到一张叫「语音语气」的卡片。
 
 2) 打开实验总闸
@@ -38,7 +38,7 @@ voice-preset-editor.html      配套工具：可视化编辑语气（双击打�
 
 4) 预设文件（可选）
    不放也行：插件第一次发语音时会自动在 data\ 生成一份默认预设
-   （暴躁 / 呆萌两套，默认暴躁）。想手动放的话，把 voice-presets.json
+   （五套：暴躁 / 呆萌 / 普通 / 温柔 / 冷酷，默认暴躁）。想手动放的话，把 voice-presets.json
    复制到鲸鲸的 data\ 目录下（和 config.json 同级的那一层），
    路径示例：D:\WhaleGirl\data\voice-presets.json。
    已存在的预设文件绝不会被插件覆盖。
@@ -94,6 +94,32 @@ data\voice-send.json 里改：
 改完不用重启，下一次合成语音就生效。语气指令（instructions）由插件在下一次
 发语音时自动写进 voice-send.json，不用手动同步；在启动器 UI 里手填的语气指令
 会被当前预设覆盖，要改请改预设。
+
+
+切换语气预设（不用编辑器）
+------------------------
+改一个词就行，不用装任何工具：
+
+1) 打开 data\voice-presets.json（记事本 / VSCode 都行）
+   路径示例：D:\WhaleGirl\data\voice-presets.json
+
+2) 找到最上面那行 "active": "xxx"，把 xxx 换成要用的预设 key：
+
+     irritable  →  暴躁（一点就着、说话带脏字、会吼人）
+     adorkable  →  呆萌（慢半拍、语气软、会自己笑出来）
+     normal     →  普通（自然平稳，只有两三处轻音效）
+     gentle     →  温柔（说话软和清楚、会认真接话）
+     cold       →  冷酷（惜字如金、叹气和啧嘴多）
+
+3) 保存，下一条回复就生效，不用重启鲸鲸。
+
+顺手可调：每套预设里的 "voiceChance"（0-100）是这套自己的语音概率——
+          例如 10 = 大约十句里有一句发语音；设为 0 就只在明确要语音时才发。
+
+注意：
+· 只改 active 这一个词，别动别的（JSON 改坏了会读不出来，插件会退回内置默认）
+· 保存时保持 UTF-8 编码（记事本默认就是）
+· 改坏了：从分享包里再拷一份 voice-presets.json 覆盖回去即可
 
 
 注意
